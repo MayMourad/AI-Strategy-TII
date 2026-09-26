@@ -1,5 +1,5 @@
 import { motion } from "motion/react"
-import { CircleX, Gauge, Network, ShieldAlert, TrendingUp } from "lucide-react"
+import { CircleX, Gauge, LineChart, Network, ShieldAlert, TrendingUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 const EVALUATION = [
@@ -18,6 +18,12 @@ const EVALUATION = [
     label: "Scalability",
     body: "As BRC's own sequencing volume grows through its Biofoundry and national efforts such as the Emirati Genome Program (700,000+ participants sequenced as of 2025), the confidence layer can absorb more local reference data over time, a flywheel where more regional use narrows the blind spot instead of widening it.",
   },
+]
+
+const SUCCESS_METRICS = [
+  "% of Gulf/Emirati-ancestry variants flagged Low-confidence, tracked monthly; a falling trend means the regional reference layer is genuinely closing the gap.",
+  "Median researcher turnaround time on flagged low-confidence reviews, so mandatory review doesn't become a silent bottleneck.",
+  "Count of variants where regional data later reclassified an initial ranking, the direct measure of how many misses Layer 2 caught.",
 ]
 
 const ALTERNATIVES = [
@@ -154,6 +160,21 @@ export function EvaluationSection() {
                     <span className="text-foreground">{alt.option}</span>
                     <span className="text-muted-foreground"> &mdash; rejected: {alt.reason}</span>
                   </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="mt-5 border-t border-primary/20 pt-5">
+            <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              <LineChart className="size-3.5" />
+              How we'd measure this is working
+            </div>
+            <ul className="mt-3 space-y-2">
+              {SUCCESS_METRICS.map((metric) => (
+                <li key={metric} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                  <span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" />
+                  {metric}
                 </li>
               ))}
             </ul>

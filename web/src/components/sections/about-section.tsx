@@ -1,3 +1,5 @@
+import { FileDown } from "lucide-react"
+
 export function AboutSection() {
   return (
     <section id="about" className="scroll-mt-24 border-t border-border/60 py-16">
@@ -13,10 +15,18 @@ export function AboutSection() {
               logic for demonstration only and do not reflect real genomic analysis or clinical
               data.
             </p>
+            <a
+              href="/AI-Strategy-TII/AI_Strategy_Brief_TII_BRC.docx"
+              download
+              className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+            >
+              <FileDown className="size-4" />
+              Download the one-page strategy brief (.docx)
+            </a>
           </div>
           <div className="text-sm text-muted-foreground sm:text-right">
             <div>Prepared for a Grade 12 AI Strategy Project</div>
-            <div className="mt-1">Deadline: 30 September 2026</div>
+            <div className="mt-1">May Ahmed Mourad, G12D</div>
           </div>
         </div>
       </div>
