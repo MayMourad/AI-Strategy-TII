@@ -1,7 +1,9 @@
 import { motion } from "motion/react"
 import { ArrowDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { DnaHelix } from "@/components/three/dna-helix"
+import { SplineEmbed } from "@/components/three/spline-embed"
+
+const SPLINE_DNA_URL = "https://my.spline.design/3ddna-d9AcMkA8mK2jbQ59gjomhMlR/"
 
 export function Hero() {
   return (
@@ -15,7 +17,7 @@ export function Hero() {
       />
 
       <div className="absolute inset-y-0 right-0 -z-10 w-full opacity-25 sm:w-[60%] sm:opacity-100 lg:w-[52%]">
-        <DnaHelix className="h-full w-full" />
+        <SplineEmbed url={SPLINE_DNA_URL} className="h-full w-full" title="3D DNA double helix" />
       </div>
       <div className="absolute inset-y-0 right-0 -z-10 w-full bg-gradient-to-r from-background via-background/70 to-background/50 sm:via-background/85 sm:to-transparent sm:w-[70%]" />
 
