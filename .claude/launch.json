@@ -6,6 +6,18 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8811"],
       "port": 8811
+    },
+    {
+      "name": "web-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "web", "dev", "--port", "5183", "--strictPort"],
+      "port": 5183
+    },
+    {
+      "name": "web-preview",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "web", "preview", "--port", "5184", "--strictPort"],
+      "port": 5184
     }
   ]
 }
