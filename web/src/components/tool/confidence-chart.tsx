@@ -27,9 +27,9 @@ export function ConfidenceChart({ high, medium, low }: ConfidenceChartProps) {
           dataKey="name"
           tickLine={false}
           axisLine={false}
-          tick={{ fill: "#8496a9", fontSize: 12 }}
+          tick={{ fill: "#aebdcc", fontSize: 12 }}
         />
-        <YAxis tickLine={false} axisLine={false} tick={{ fill: "#8496a9", fontSize: 12 }} width={28} allowDecimals={false} />
+        <YAxis tickLine={false} axisLine={false} tick={{ fill: "#aebdcc", fontSize: 12 }} width={28} allowDecimals={false} />
         <Tooltip
           cursor={{ fill: "rgba(255,255,255,0.03)" }}
           contentStyle={{
