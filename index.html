@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Variant Prioritization &amp; Representation-Confidence Auditor</title>
+<meta name="description" content="Prototype decision-support tool that ranks genetic variants by significance and flags reference-database representation gaps for Gulf/Emirati ancestry cohorts.">
+<style>
+  :root{
+    --navy-900:#0A2036;
+    --navy-800:#123252;
+    --navy-700:#1B4A72;
+    --navy-600:#2C5F8A;
+    --teal-700:#0B5C56;
+    --teal-600:#0F7173;
+    --teal-500:#149091;
+    --teal-100:#E3F4F1;
+    --bg:#F5F8FA;
+    --surface:#FFFFFF;
+    --border:#E1E7ED;
+    --border-strong:#C9D4DE;
+    --text:#152238;
+    --text-secondary:#5B6B7D;
+    --text-tertiary:#8494A3;
+    --amber-100:#FBF3DB;
+    --amber-700:#8A5A00;
+    --red-100:#FDECED;
+    --red-700:#A02F2D;
+    --red-border:#F2C6C7;
+    --radius-sm:6px;
+    --radius-md:10px;
+    --radius-lg:16px;
+    --ease-out:cubic-bezier(0.23,1,0.32,1);
+    --ease-in-out:cubic-bezier(0.77,0,0.175,1);
+    --shadow-card:0 1px 2px rgba(10,32,54,0.04);
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  }
+  h1,h2,h3{
+    font-weight:650;
+    letter-spacing:-0.01em;
+    color:var(--navy-900);
+    margin:0;
+  }
+  p{margin:0;}
+  .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding:0 28px;
+  }
+
+  /* ---------- Prototype badge (always visible) ---------- */
+  .proto-bar{
+    position:sticky;
+    top:0;
+    z-index:50;
+    background:var(--navy-900);
+    color:#fff;
+    font-size:12.5px;
+    letter-spacing:0.03em;
+    text-align:center;
+    padding:7px 12px;
+  }
+  .proto-bar strong{ font-weight:700; color:#FFD98A; }
+
+  /* ---------- Header / hero ---------- */
+  header.hero{
+    padding:56px 0 44px;
+    border-bottom:1px solid var(--border);
+    background:var(--surface);
+    overflow:hidden;
+  }
+  .hero-grid{
+    display:grid;
+    grid-template-columns:1.15fr 0.85fr;
+    gap:40px;
+    align-items:center;
+  }
+  .eyebrow{
+    display:inline-block;
+    font-size:11.5px;
+    font-weight:700;
+    letter-spacing:0.09em;
+    text-transform:uppercase;
+    color:var(--teal-700);
+    background:var(--teal-100);
+    padding:5px 10px;
+    border-radius:999px;
+    margin-bottom:16px;
+  }
+  header.hero h1{
+    font-size:clamp(28px, 3.6vw, 40px);
+    line-height:1.12;
+    max-width:16ch;
+  }
+  header.hero .lede{
+    margin-top:16px;
+    font-size:16.5px;
+    color:var(--text-secondary);
+    max-width:52ch;
+  }
+  header.hero .org-line{
+    margin-top:20px;
+    font-size:13.5px;
+    color:var(--text-tertiary);
+  }
+  .org-line strong{ color:var(--navy-800); font-weight:600; }
+
+  /* ---------- 3D DNA helix ---------- */
+  .helix-stage{
+    perspective:760px;
+    width:100%;
+    height:280px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .helix{
+    position:relative;
+    width:20px;
+    height:230px;
+    transform-style:preserve-3d;
+    animation:helix-spin 24s linear infinite;
+  }
+  @keyframes helix-spin{
+    from{ transform:rotateY(0deg); }
+    to{ transform:rotateY(360deg); }
+  }
+  .bp{
+    position:absolute;
+    left:50%;
+    width:0;
+    height:0;
+    transform-style:preserve-3d;
+  }
+  .bp .dot{
+    position:absolute;
+    width:11px;
+    height:11px;
+    margin:-5.5px 0 0 -5.5px;
+    border-radius:50%;
+  }
+  .bp .dot.a{ background:var(--navy-700); }
+  .bp .dot.b{ background:var(--teal-600); }
+  .bp .dot.variant{ background:#D98A2B; box-shadow:0 0 0 3px rgba(217,138,43,0.18); }
+  .bp .rung{
+    position:absolute;
+    height:1.5px;
+    top:-0.75px;
+    background:var(--border-strong);
+    transform-origin:left center;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .helix{ animation:none; transform:rotateY(24deg); }
+  }
+  @media (max-width:860px){
+    .hero-grid{ grid-template-columns:1fr; }
+    .helix-stage{ height:200px; order:-1; }
+  }
+
+  /* ---------- Sections ---------- */
+  main{ padding:48px 0 64px; }
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:32px 32px 34px;
+    box-shadow:var(--shadow-card);
+  }
+  .panel + .panel{ margin-top:24px; }
+  .panel-head{ margin-bottom:22px; }
+  .panel-head h2{ font-size:21px; }
+  .panel-head .sub{ margin-top:6px; font-size:14.5px; color:var(--text-secondary); }
+
+  /* ---------- Input panel ---------- */
+  .input-grid{
+    display:grid;
+    grid-template-columns:1fr 1.35fr;
+    gap:28px;
+  }
+  @media (max-width:780px){ .input-grid{ grid-template-columns:1fr; } }
+
+  .field-label{
+    display:block;
+    font-size:13px;
+    font-weight:650;
+    color:var(--navy-800);
+    margin-bottom:9px;
+  }
+  .field-help{
+    font-size:12.5px;
+    color:var(--text-tertiary);
+    margin-top:8px;
+  }
+  select.sample-select{
+    width:100%;
+    font-size:14.5px;
+    font-family:inherit;
+    color:var(--text);
+    background:var(--surface);
+    border:1px solid var(--border-strong);
+    border-radius:var(--radius-sm);
+    padding:11px 14px;
+    appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9' fill='none'><path d='M1 1L7 7L13 1' stroke='%235B6B7D' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat;
+    background-position:right 14px center;
+    transition:border-color 160ms var(--ease-out);
+  }
+  select.sample-select:focus-visible{
+    outline:none;
+    border-color:var(--teal-600);
+    box-shadow:0 0 0 3px rgba(15,113,115,0.14);
+  }
+
+  .ancestry-options{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  @media (max-width:520px){ .ancestry-options{ grid-template-columns:1fr; } }
+  .ancestry-card{ position:relative; }
+  .ancestry-card input{
+    position:absolute;
+    opacity:0;
+    width:100%; height:100%;
+    top:0; left:0;
+    margin:0;
+    cursor:pointer;
+  }
+  .ancestry-card label{
+    display:block;
+    border:1.5px solid var(--border-strong);
+    border-radius:var(--radius-md);
+    padding:14px 16px;
+    cursor:pointer;
+    transition:border-color 160ms var(--ease-out), background 160ms var(--ease-out), transform 120ms var(--ease-out);
+  }
+  .ancestry-card .name{
+    font-size:14px;
+    font-weight:650;
+    color:var(--navy-900);
+  }
+  .ancestry-card .detail{
+    font-size:12.5px;
+    color:var(--text-tertiary);
+    margin-top:4px;
+  }
+  .ancestry-card input:checked + label{
+    border-color:var(--teal-600);
+    background:var(--teal-100);
+  }
+  .ancestry-card input:focus-visible + label{
+    outline:2px solid var(--teal-600);
+    outline-offset:2px;
+  }
+  @media (hover:hover) and (pointer:fine){
+    .ancestry-card label:hover{ border-color:var(--teal-500); }
+  }
+  .ancestry-card input:active + label{ transform:scale(0.99); }
+
+  .run-row{
+    margin-top:22px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  button.run-btn{
+    font-family:inherit;
+    font-size:14.5px;
+    font-weight:650;
+    color:#fff;
+    background:var(--navy-900);
+    border:none;
+    border-radius:var(--radius-sm);
+    padding:12px 22px;
+    cursor:pointer;
+    transition:background 160ms var(--ease-out), transform 100ms var(--ease-out);
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+  }
+  button.run-btn:hover{ background:var(--navy-800); }
+  button.run-btn:active{ transform:scale(0.98); }
+  button.run-btn:disabled{ background:var(--border-strong); cursor:not-allowed; }
+  button.run-btn:focus-visible{ outline:2px solid var(--teal-600); outline-offset:2px; }
+  .run-btn svg{ transition:transform 400ms var(--ease-in-out); }
+  .run-btn.is-loading svg{ animation:spin-icon 900ms linear infinite; }
+  @keyframes spin-icon{ to{ transform:rotate(360deg); } }
+
+  .run-hint{ font-size:12.5px; color:var(--text-tertiary); }
+
+  /* ---------- Results panel ---------- */
+  .results-summary{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    font-size:13.5px;
+    color:var(--text-secondary);
+    margin-bottom:16px;
+    min-height:20px;
+  }
+  .results-summary .count-flag{
+    color:var(--red-700);
+    font-weight:650;
+  }
+
+  .empty-state{
+    padding:44px 20px;
+    text-align:center;
+    color:var(--text-tertiary);
+    font-size:14px;
+    border:1px dashed var(--border-strong);
+    border-radius:var(--radius-md);
+  }
+
+  .skeleton-rows{ display:none; flex-direction:column; gap:10px; }
+  .skeleton-rows.active{ display:flex; }
+  .skel-row{
+    height:46px;
+    border-radius:var(--radius-sm);
+    background:linear-gradient(90deg, #EEF2F5 25%, #F7F9FA 37%, #EEF2F5 63%);
+    background-size:400% 100%;
+    animation:shimmer 1.4s ease infinite;
+  }
+  @keyframes shimmer{ 0%{ background-position:100% 0; } 100%{ background-position:0 0; } }
+  @media (prefers-reduced-motion: reduce){
+    .skel-row{ animation:none; background:#EEF2F5; }
+  }
+  .processing-note{
+    font-size:13px;
+    color:var(--text-tertiary);
+    margin-top:12px;
+    text-align:center;
+  }
+
+  .table-scroll{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    margin:0 -1px;
+  }
+  table.results-table{
+    width:100%;
+    min-width:560px;
+    border-collapse:collapse;
+    display:none;
+  }
+  table.results-table.active{ display:table; }
+  @media (max-width:640px){
+    .panel{ padding:24px 20px 26px; }
+  }
+  .scroll-hint{
+    display:none;
+    font-size:12px;
+    color:var(--text-tertiary);
+    margin-top:8px;
+  }
+  @media (max-width:640px){
+    .scroll-hint.active{ display:block; }
+  }
+  .results-table thead th{
+    text-align:left;
+    font-size:11.5px;
+    font-weight:700;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    color:var(--text-tertiary);
+    border-bottom:1.5px solid var(--border);
+    padding:0 14px 10px;
+  }
+  .results-table tbody td{
+    padding:14px 14px;
+    border-bottom:1px solid var(--border);
+    font-size:14px;
+    vertical-align:middle;
+  }
+  .results-table tbody tr{
+    opacity:0;
+    transform:translateY(8px);
+  }
+  .results-table tbody tr.revealed{
+    animation:row-in 480ms var(--ease-out) forwards;
+    animation-delay:calc(var(--i) * 45ms);
+  }
+  @keyframes row-in{ to{ opacity:1; transform:translateY(0); } }
+  @media (prefers-reduced-motion: reduce){
+    .results-table tbody tr{ opacity:1; transform:none; }
+    .results-table tbody tr.revealed{ animation:none; }
+  }
+  .results-table tbody tr:last-child td{ border-bottom:none; }
+  .variant-gene{ font-weight:650; color:var(--navy-900); }
+  .variant-id{ display:block; font-size:12px; color:var(--text-tertiary); margin-top:2px; }
+
+  .sig-score{ font-weight:650; }
+  .sig-bar-track{
+    display:inline-block;
+    width:56px; height:5px;
+    border-radius:3px;
+    background:var(--border);
+    margin-left:9px;
+    position:relative;
+    top:-1px;
+  }
+  .sig-bar-fill{ height:100%; border-radius:3px; background:var(--navy-600); }
+
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    font-size:12px;
+    font-weight:650;
+    letter-spacing:0.02em;
+    padding:4px 10px;
+    border-radius:999px;
+  }
+  .badge.high{ background:var(--teal-100); color:var(--teal-700); }
+  .badge.medium{ background:var(--amber-100); color:var(--amber-700); }
+  .badge.low{ background:var(--red-100); color:var(--red-700); }
+
+  .review-flag{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    font-weight:650;
+    color:var(--red-700);
+    background:var(--red-100);
+    border:1px solid var(--red-border);
+    padding:4px 10px;
+    border-radius:var(--radius-sm);
+  }
+  .review-none{ font-size:12.5px; color:var(--text-tertiary); }
+
+  /* ---------- Info panel ---------- */
+  .info-grid{
+    display:grid;
+    grid-template-columns:0.85fr 1.15fr;
+    gap:32px;
+    align-items:start;
+  }
+  @media (max-width:780px){ .info-grid{ grid-template-columns:1fr; } }
+  .stat-cards{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:520px){ .stat-cards{ grid-template-columns:1fr; } }
+  .stat-card{
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    padding:18px 16px;
+    background:var(--bg);
+  }
+  .stat-card .num{
+    font-size:30px;
+    font-weight:700;
+    color:var(--navy-900);
+    letter-spacing:-0.01em;
+  }
+  .stat-card .cap{
+    font-size:12.5px;
+    color:var(--text-secondary);
+    margin-top:6px;
+    line-height:1.45;
+  }
+  .info-body p{ font-size:14.5px; color:var(--text-secondary); }
+  .info-body p + p{ margin-top:12px; }
+  .citation{
+    margin-top:16px;
+    font-size:12px;
+    color:var(--text-tertiary);
+    border-top:1px solid var(--border);
+    padding-top:12px;
+  }
+
+  /* ---------- Reveal on scroll ---------- */
+  .reveal{
+    opacity:0;
+    transform:translateY(14px);
+    transition:opacity 620ms var(--ease-out), transform 620ms var(--ease-out);
+  }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+  @media (prefers-reduced-motion: reduce){
+    .reveal{ opacity:1; transform:none; transition:none; }
+  }
+
+  footer{
+    border-top:1px solid var(--border);
+    padding:32px 0 40px;
+    background:var(--surface);
+  }
+  footer .disclaimer{
+    font-size:12.5px;
+    color:var(--text-tertiary);
+    max-width:74ch;
+    line-height:1.6;
+  }
+  footer .meta-row{
+    margin-top:16px;
+    display:flex;
+    gap:18px;
+    flex-wrap:wrap;
+    font-size:12.5px;
+    color:var(--text-tertiary);
+  }
+  footer a{ color:var(--teal-700); text-decoration:none; }
+  footer a:hover{ text-decoration:underline; }
+
+  .sr-only{
+    position:absolute;
+    width:1px;height:1px;
+    padding:0;margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+</style>
+</head>
+<body>
+
+  <div class="proto-bar" role="status">
+    <strong>PROTOTYPE</strong> &mdash; simulated data, not a diagnostic tool
+  </div>
+
+  <header class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow">Student prototype &middot; unaffiliated with TII</span>
+        <h1>Variant Prioritization &amp; Representation-Confidence Auditor</h1>
+        <p class="lede">
+          Ranks candidate genetic variants by clinical significance, and pairs every ranking
+          with a confidence flag showing how well the reference databases actually cover the
+          patient's ancestry.
+        </p>
+        <p class="org-line">
+          Concept target: <strong>Technology Innovation Institute, Biotechnology Research Center (TII BRC)</strong>,
+          Abu Dhabi &middot; Applied genomics and bioinformatics
+        </p>
+      </div>
+      <div class="helix-stage">
+        <div class="helix" id="helix"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <section class="panel reveal" id="input-panel">
+      <div class="panel-head">
+        <h2>Configure a prioritization run</h2>
+        <p class="sub">Load a variant batch, choose which reference-ancestry context to check it against, then run.</p>
+      </div>
+
+      <div class="input-grid">
+        <div>
+          <label class="field-label" for="sample-select">Variant batch</label>
+          <select id="sample-select" class="sample-select">
+            <option value="cardio" selected>Cardiomyopathy panel, pilot cohort A (12 variants)</option>
+            <option value="cancer">Hereditary cancer panel, pilot cohort B (10 variants)</option>
+            <option value="metabolic">Metabolic disorder panel, pilot cohort C (8 variants)</option>
+          </select>
+          <p class="field-help">Preloaded batches stand in for a real VCF/variant-call upload in this mockup.</p>
+        </div>
+
+        <div>
+          <span class="field-label" id="ancestry-label">Reference-ancestry context</span>
+          <div class="ancestry-options" role="radiogroup" aria-labelledby="ancestry-label">
+            <div class="ancestry-card">
+              <input type="radio" name="ancestry" id="ancestry-euro" value="euro">
+              <label for="ancestry-euro">
+                <span class="name">European reference cohort</span>
+                <span class="detail">gnomAD / ClinVar baseline</span>
+              </label>
+            </div>
+            <div class="ancestry-card">
+              <input type="radio" name="ancestry" id="ancestry-gulf" value="gulf">
+              <label for="ancestry-gulf">
+                <span class="name">Gulf / Emirati cohort</span>
+                <span class="detail">+ UAE Reference Genome layer</span>
+              </label>
+            </div>
+          </div>
+          <p class="field-help">Determines which reference datasets the confidence layer checks coverage against.</p>
+        </div>
+      </div>
+
+      <div class="run-row">
+        <button class="run-btn" id="run-btn" type="button" disabled>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 1V4M8 12V15M1 8H4M12 8H15M3.05 3.05L5.17 5.17M10.83 10.83L12.95 12.95M12.95 3.05L10.83 5.17M5.17 10.83L3.05 12.95" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+          Run prioritization
+        </button>
+        <span class="run-hint" id="run-hint">Select a reference-ancestry context to enable this run.</span>
+      </div>
+    </section>
+
+    <section class="panel reveal" id="results-panel">
+      <div class="panel-head">
+        <h2>Prioritized results</h2>
+        <p class="sub">One row per variant, ranked by significance, with a confidence flag from the representation layer.</p>
+      </div>
+
+      <div class="results-summary" id="results-summary" aria-live="polite"></div>
+
+      <div class="empty-state" id="empty-state">
+        No run yet. Choose a reference-ancestry context above, then run prioritization.
+      </div>
+
+      <div class="skeleton-rows" id="skeleton-rows">
+        <div class="skel-row"></div>
+        <div class="skel-row"></div>
+        <div class="skel-row"></div>
+        <div class="skel-row"></div>
+      </div>
+      <p class="processing-note" id="processing-note" style="display:none;">Cross-referencing variant batch against reference panels&hellip;</p>
+
+      <div class="table-scroll">
+        <table class="results-table" id="results-table">
+          <thead>
+            <tr>
+              <th scope="col">Variant / gene</th>
+              <th scope="col">Clinical significance</th>
+              <th scope="col">Representation confidence</th>
+              <th scope="col">Review status</th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+      <p class="scroll-hint" id="scroll-hint">Swipe the table sideways to see all columns.</p>
+    </section>
+
+    <section class="panel reveal" id="info-panel">
+      <div class="panel-head">
+        <h2>Why representation confidence matters</h2>
+      </div>
+      <div class="info-grid">
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="num">~0.2%</div>
+            <div class="cap">of gnomAD's reference samples are of Middle Eastern ancestry.</div>
+          </div>
+          <div class="stat-card">
+            <div class="num">53%</div>
+            <div class="cap">of high-impact coding variants in a 2,116-person Middle East cohort were absent from gnomAD entirely (2022 study).</div>
+          </div>
+        </div>
+        <div class="info-body">
+          <p>
+            Global reference databases were built mostly from European-ancestry cohorts.
+            A prioritization tool trained on them inherits that skew silently: it ranks a
+            Gulf-ancestry variant with the same apparent confidence as a well-studied one,
+            even when the underlying evidence base is thin.
+          </p>
+          <p>
+            This prototype's second layer checks each variant's regional coverage instead of
+            hiding the gap, and routes low-confidence rows to mandatory human review rather
+            than letting a ranking pass through untouched.
+          </p>
+          <p class="citation">
+            Sources: Ramaswamy et al., "Middle Eastern Genetic Variation Improves Clinical
+            Annotation of the Human Genome," Journal of Personalized Medicine, 2022 (PMC8956070).
+            Scheinfeldt et al., UAE population reference genome study, Frontiers in Genetics, 2021.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p class="disclaimer">
+        This is an unaffiliated student prototype built for a Grade 12 AI strategy assignment.
+        It is not affiliated with, endorsed by, or reviewed by the Technology Innovation Institute
+        or its Biotechnology Research Center. All variant identifiers, scores, and confidence
+        flags on this page are simulated with deterministic mock logic for demonstration only
+        and do not reflect real genomic analysis or clinical data.
+      </p>
+      <div class="meta-row">
+        <span>Prepared by <!-- TODO: add your name --> a Grade 12 student, AI Strategy Project</span>
+        <span>Deadline: 30 September 2026</span>
+      </div>
+    </div>
+  </footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- Mock data ---------------- */
+  var BATCHES = {
+    cardio: [
+      { gene:"MYBPC3", variant:"c.2827C>T",        sig:88, confEuro:"high",   confGulf:"high"   },
+      { gene:"MYH7",   variant:"c.1988G>A",        sig:91, confEuro:"high",   confGulf:"high"   },
+      { gene:"TNNT2",  variant:"c.517G>A",         sig:76, confEuro:"high",   confGulf:"medium" },
+      { gene:"TTN",    variant:"c.43628-2A>G",     sig:64, confEuro:"medium", confGulf:"low"    },
+      { gene:"PKP2",   variant:"c.1643del",        sig:82, confEuro:"high",   confGulf:"medium" },
+      { gene:"DSP",    variant:"c.273del",         sig:55, confEuro:"high",   confGulf:"low"    },
+      { gene:"LMNA",   variant:"c.673C>T",         sig:70, confEuro:"high",   confGulf:"high"   },
+      { gene:"RBM20",  variant:"c.1907G>A",        sig:48, confEuro:"high",   confGulf:"low"    },
+      { gene:"TPM1",   variant:"c.574G>A",         sig:61, confEuro:"high",   confGulf:"medium" },
+      { gene:"MYL2",   variant:"c.64G>A",          sig:45, confEuro:"high",   confGulf:"low"    },
+      { gene:"ACTC1",  variant:"c.301G>A",         sig:58, confEuro:"high",   confGulf:"low"    },
+      { gene:"PLN",    variant:"c.40_42delAGA",    sig:73, confEuro:"high",   confGulf:"medium" }
+    ],
+    cancer: [
+      { gene:"BRCA1",  variant:"c.5266dupC",       sig:93, confEuro:"high",   confGulf:"high"   },
+      { gene:"BRCA2",  variant:"c.5946delT",       sig:89, confEuro:"high",   confGulf:"high"   },
+      { gene:"MLH1",   variant:"c.1852_1855del",   sig:85, confEuro:"high",   confGulf:"medium" },
+      { gene:"MSH2",   variant:"c.942+3A>T",       sig:67, confEuro:"high",   confGulf:"low"    },
+      { gene:"MSH6",   variant:"c.3226C>T",        sig:52, confEuro:"medium", confGulf:"low"    },
+      { gene:"PMS2",   variant:"c.736_737del",     sig:78, confEuro:"high",   confGulf:"medium" },
+      { gene:"TP53",   variant:"c.524G>A",         sig:90, confEuro:"high",   confGulf:"high"   },
+      { gene:"PALB2",  variant:"c.172_175del",     sig:62, confEuro:"high",   confGulf:"low"    },
+      { gene:"ATM",    variant:"c.7271T>G",        sig:58, confEuro:"high",   confGulf:"low"    },
+      { gene:"CHEK2",  variant:"c.1100delC",       sig:71, confEuro:"high",   confGulf:"medium" }
+    ],
+    metabolic: [
+      { gene:"LDLR",   variant:"c.681C>G",         sig:84, confEuro:"high",   confGulf:"high"   },
+      { gene:"PCSK9",  variant:"c.1420C>T",        sig:67, confEuro:"high",   confGulf:"medium" },
+      { gene:"APOB",   variant:"c.10580G>A",       sig:59, confEuro:"high",   confGulf:"low"    },
+      { gene:"GAA",    variant:"c.-32-13T>G",      sig:71, confEuro:"high",   confGulf:"high"   },
+      { gene:"PAH",    variant:"c.1222C>T",        sig:63, confEuro:"medium", confGulf:"low"    },
+      { gene:"G6PD",   variant:"c.563C>T",         sig:48, confEuro:"high",   confGulf:"low"    },
+      { gene:"HEXA",   variant:"c.1274_1277dupTATC", sig:88, confEuro:"high", confGulf:"medium" },
+      { gene:"ABCA1",  variant:"c.6370C>T",        sig:54, confEuro:"high",   confGulf:"low"    }
+    ]
+  };
+
+  var CONF_LABEL = { high:"High", medium:"Medium", low:"Low" };
+
+  function sigLabel(score){
+    if (score >= 75) return "High";
+    if (score >= 50) return "Medium";
+    return "Low";
+  }
+
+  /* ---------------- DOM refs ---------------- */
+  var sampleSelect   = document.getElementById("sample-select");
+  var ancestryInputs = document.querySelectorAll('input[name="ancestry"]');
+  var runBtn         = document.getElementById("run-btn");
+  var runHint        = document.getElementById("run-hint");
+  var emptyState     = document.getElementById("empty-state");
+  var skeletonRows    = document.getElementById("skeleton-rows");
+  var processingNote  = document.getElementById("processing-note");
+  var resultsTable    = document.getElementById("results-table");
+  var resultsBody     = document.getElementById("results-body");
+  var resultsSummary  = document.getElementById("results-summary");
+  var scrollHint      = document.getElementById("scroll-hint");
+
+  function selectedAncestry(){
+    for (var i=0;i<ancestryInputs.length;i++){
+      if (ancestryInputs[i].checked) return ancestryInputs[i].value;
+    }
+    return null;
+  }
+
+  function updateRunEnabled(){
+    var ancestry = selectedAncestry();
+    runBtn.disabled = !ancestry;
+    runHint.textContent = ancestry
+      ? "Ready. This run uses simulated mock logic only."
+      : "Select a reference-ancestry context to enable this run.";
+  }
+  ancestryInputs.forEach(function(input){
+    input.addEventListener("change", updateRunEnabled);
+  });
+  updateRunEnabled();
+
+  function badgeHtml(level){
+    return '<span class="badge ' + level + '">' + CONF_LABEL[level] + '</span>';
+  }
+
+  function renderRows(rows, ancestry){
+    resultsBody.innerHTML = "";
+    var flaggedCount = 0;
+
+    rows.forEach(function(row, i){
+      var confidence = ancestry === "gulf" ? row.confGulf : row.confEuro;
+      var flagged = confidence === "low";
+      if (flagged) flaggedCount++;
+
+      var tr = document.createElement("tr");
+      tr.style.setProperty("--i", i);
+
+      tr.innerHTML =
+        '<td>' +
+          '<span class="variant-gene">' + row.gene + '</span>' +
+          '<span class="variant-id mono">' + row.variant + '</span>' +
+        '</td>' +
+        '<td>' +
+          '<span class="sig-score">' + row.sig + '</span>' +
+          '<span class="sig-bar-track"><span class="sig-bar-fill" style="width:' + row.sig + '%"></span></span>' +
+          '<div class="field-help" style="margin-top:4px;">' + sigLabel(row.sig) + ' significance</div>' +
+        '</td>' +
+        '<td>' + badgeHtml(confidence) + '</td>' +
+        '<td>' + (flagged
+            ? '<span class="review-flag">Manual review recommended</span>'
+            : '<span class="review-none">No flag</span>'
+          ) +
+        '</td>';
+
+      resultsBody.appendChild(tr);
+    });
+
+    requestAnimationFrame(function(){
+      var trs = resultsBody.querySelectorAll("tr");
+      trs.forEach(function(tr){ tr.classList.add("revealed"); });
+    });
+
+    var cohortLabel = ancestry === "gulf" ? "Gulf / Emirati cohort" : "European reference cohort";
+    resultsSummary.innerHTML =
+      rows.length + ' variants ranked against the <strong>' + cohortLabel + '</strong> context. ' +
+      (flaggedCount > 0
+        ? '<span class="count-flag">' + flaggedCount + ' flagged for manual review.</span>'
+        : 'None flagged for manual review.');
+  }
+
+  runBtn.addEventListener("click", function(){
+    var batchKey = sampleSelect.value;
+    var ancestry = selectedAncestry();
+    if (!ancestry) return;
+
+    emptyState.style.display = "none";
+    resultsTable.classList.remove("active");
+    resultsSummary.textContent = "";
+    skeletonRows.classList.add("active");
+    processingNote.style.display = "block";
+    runBtn.disabled = true;
+    runBtn.classList.add("is-loading");
+
+    window.setTimeout(function(){
+      skeletonRows.classList.remove("active");
+      processingNote.style.display = "none";
+      runBtn.classList.remove("is-loading");
+      runBtn.disabled = false;
+
+      renderRows(BATCHES[batchKey], ancestry);
+      resultsTable.classList.add("active");
+      scrollHint.classList.add("active");
+    }, 700);
+  });
+
+  /* ---------------- DNA helix build ---------------- */
+  (function buildHelix(){
+    var helix = document.getElementById("helix");
+    var count = 22;
+    var gap = 10.5;
+    var radius = 46;
+    var stepDeg = 27;
+
+    for (var i=0;i<count;i++){
+      var wrap = document.createElement("div");
+      wrap.className = "bp";
+      wrap.style.top = (i * gap) + "px";
+
+      var isVariant = (i % 4 === 1);
+      var a = document.createElement("div");
+      a.className = "dot a";
+      a.style.transform = "rotateY(" + (i*stepDeg) + "deg) translateZ(" + radius + "px)";
+
+      var b = document.createElement("div");
+      b.className = "dot b" + (isVariant ? " variant" : "");
+      b.style.transform = "rotateY(" + (i*stepDeg + 180) + "deg) translateZ(" + radius + "px)";
+
+      wrap.appendChild(a);
+      wrap.appendChild(b);
+      helix.appendChild(wrap);
+    }
+  })();
+
+  /* ---------------- Scroll reveal ---------------- */
+  var reveals = document.querySelectorAll(".reveal");
+  if ("IntersectionObserver" in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting){
+          entry.target.classList.add("in");
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    reveals.forEach(function(el){ io.observe(el); });
+  } else {
+    reveals.forEach(function(el){ el.classList.add("in"); });
+  }
+
+})();
+</script>
+
+</body>
+</html>
