@@ -1,12 +1,14 @@
 import { AnimatePresence, motion } from "motion/react"
-import { Dna, FlaskConical, Info, LayoutDashboard } from "lucide-react"
+import { Building2, FlaskConical, Info, LayoutDashboard, ScaleIcon, Workflow } from "lucide-react"
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 
 const SECTIONS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "organization", label: "Organization", icon: Building2 },
+  { id: "system", label: "System", icon: Workflow },
   { id: "tool", label: "Run diagnostic", icon: FlaskConical },
-  { id: "evidence", label: "Evidence", icon: Dna },
+  { id: "evaluation", label: "Evaluation", icon: ScaleIcon },
   { id: "about", label: "About", icon: Info },
 ] as const
 
@@ -57,6 +59,7 @@ export function ExpandableNav() {
                 onMouseEnter={() => setHovered(section.id)}
                 onFocus={() => setHovered(section.id)}
                 aria-current={isActive ? "true" : undefined}
+                aria-label={section.label}
                 className={cn(
                   "relative flex h-9 items-center gap-2 overflow-hidden rounded-full px-3 text-sm font-medium transition-colors",
                   isActive ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",

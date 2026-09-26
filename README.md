@@ -69,6 +69,14 @@ Commit and push the updated root `index.html`/`assets/` alongside any source cha
 
 ## Sources cited in the prototype
 
+- Abou Tayoun, A. N. & Rehm, H. L., "Genetic variation in the Middle East, an opportunity to
+  advance the human genetics field," *Genome Medicine*, 2020.
 - Ramaswamy et al., "Middle Eastern Genetic Variation Improves Clinical Annotation of the Human
   Genome," *Journal of Personalized Medicine*, 2022 (PMC8956070).
-- Scheinfeldt et al., UAE population reference genome study, *Frontiers in Genetics*, 2021.
+- Daw Elbait, G., Henschel, A., Tay, G. K. & Al Safar, H. S., "A Population-Specific Major Allele
+  Reference Genome From the United Arab Emirates Population," *Frontiers in Genetics*, 2021.
+  (Corrects an earlier draft of this project, which misattributed this citation to
+  "Scheinfeldt et al." No such paper exists; this is the real study behind the UAE reference
+  genome claim.)
+- Kore et al., "Improved Allele Frequencies in gnomAD through Local Ancestry Inference," *Nature
+  Communications*, 2025.
