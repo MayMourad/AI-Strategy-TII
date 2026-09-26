@@ -1,5 +1,5 @@
 import { motion } from "motion/react"
-import { ArrowRight, Dna, ListChecks, ShieldQuestion, Upload } from "lucide-react"
+import { ArrowRight, Dna, Lightbulb, ListChecks, ShieldQuestion, Upload } from "lucide-react"
 
 const STEPS = [
   {
@@ -69,6 +69,26 @@ export function SystemSection() {
             )
           })}
         </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.4 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mt-6 flex gap-3 rounded-xl border border-primary/25 bg-primary/5 p-5"
+        >
+          <Lightbulb className="mt-0.5 size-4 shrink-0 text-primary" />
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            <span className="font-medium text-foreground">Why Layer 1 alone cannot self-correct:</span>{" "}
+            real proteome-wide pathogenicity models, such as Google DeepMind's AlphaMissense,
+            partly learn what counts as "benign" from how common a variant already is in
+            population databases (Cheng et al., <em>Science</em>, 2023). If Middle Eastern
+            variants are barely present in that training data, the model has no way to learn they
+            are common and harmless in that population. It does not just lack data on them; it
+            actively mislearns the wrong prior. That is precisely the failure mode Layer 2 is
+            built to catch.
+          </p>
+        </motion.div>
       </div>
     </section>
   )

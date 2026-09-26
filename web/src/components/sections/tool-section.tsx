@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { Term } from "@/components/term"
 import { BATCHES, type Ancestry, confidenceFor } from "@/data/variants"
 import { ConfidenceChart } from "@/components/tool/confidence-chart"
 import { PIPELINE_STAGES, PipelineStages } from "@/components/tool/pipeline-stages"
@@ -161,7 +162,12 @@ export function ToolSection() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Preloaded batches stand in for a real VCF upload in this mockup.
+                Preloaded batches stand in for a real{" "}
+                <Term
+                  label="VCF"
+                  definition="Variant Call Format: the standard file format sequencing pipelines use to store detected genomic variants."
+                />{" "}
+                upload in this mockup.
               </p>
             </div>
 

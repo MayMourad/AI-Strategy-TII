@@ -53,6 +53,10 @@ const SOURCES = [
     citation:
       "Kore, P. et al. “Improved Allele Frequencies in gnomAD through Local Ancestry Inference.” Nature Communications, 2025.",
   },
+  {
+    citation:
+      "Cheng, J. et al. “Accurate Proteome-Wide Missense Variant Effect Prediction with AlphaMissense.” Science, 381(6664), 2023.",
+  },
 ]
 
 export function EvaluationSection() {
