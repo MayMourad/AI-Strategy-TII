@@ -9,7 +9,7 @@ reference databases (gnomAD, ClinVar) actually cover the patient's ancestry.
 confidence flags are simulated with deterministic mock logic client-side. There is no backend
 and no external API calls.
 
-Live site: `https://<username>.github.io/AI-Strategy-TII/`
+Live site: https://maymourad.github.io/AI-Strategy-TII/
 
 ## What it demonstrates
 
@@ -59,10 +59,12 @@ Commit and push the updated root `index.html`/`assets/` alongside any source cha
 
 ## Stack notes
 
-- **3D DNA helix**: hand-rolled with vanilla Three.js (not `@react-three/fiber` — its custom
+- **3D DNA helix**: an embedded Spline scene (`web/src/components/three/spline-embed.tsx`, used
+  by the hero section).
+- **Organisation emblem**: hand-rolled with vanilla Three.js (not `@react-three/fiber` — its custom
   renderer did not commit any scene content under this project's React 19.3 pin, confirmed by a
   raw Three.js smoke test that rendered fine). Driven from a `useEffect` in
-  `web/src/components/three/dna-helix.tsx`.
+  `web/src/components/three/org-emblem.tsx`.
 - **UI**: shadcn/ui components. The nav's expandable icon tabs are a hand-built equivalent of
   Skiper UI's `skiper96` ("Expandable Tabs Navigation") — that component is gated behind a paid
   Skiper UI Pro license, which this project does not have.
